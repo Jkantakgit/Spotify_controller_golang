@@ -1,6 +1,16 @@
-// main.go
+/**
+*Project name: Spotify controller
+*Package main
+*File: main.go
+*Date: 30.8.2024
+*Last change: 30.8.2024
+*Author: Petr Holánek
+*
+*/
 package main
 
+
+// Imports
 import (
 	"fmt"
 	"io"
@@ -20,7 +30,7 @@ import (
 	"github.com/zmb3/spotify"
 )
 
-// init variables
+// initialize variables
 var (
 	ch        = make(chan *spotify.Client)
 	auth      = spotify.NewAuthenticator("http://localhost:8080/callback", spotify.ScopeUserReadCurrentlyPlaying, spotify.ScopeUserReadPlaybackState, spotify.ScopeUserModifyPlaybackState)
@@ -90,6 +100,7 @@ func initspotify() *spotify.Client {
 	return client
 }
 
+// complete authorization for Spotify API requests
 func completeAuth(w http.ResponseWriter, r *http.Request) {
 	tok, err := auth.Token(state, r)
 	if err != nil {
@@ -105,6 +116,7 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 	ch <- &client
 }
 
+// initialize progress bar for song progression
 func initprogressbar(client *spotify.Client, button *widget.Button) *widget.ProgressBar {
 	pbar := widget.NewProgressBar()
 	go func() {
@@ -132,11 +144,13 @@ func initprogressbar(client *spotify.Client, button *widget.Button) *widget.Prog
 	return pbar
 }
 
+// initialize picture of current playing song
+// if no song is playing use blank picture instead
 func song_picture(client *spotify.Client, ID *spotify.ID) (*canvas.Image, *spotify.ID) {
 	playback, err := client.PlayerState()
 	if err != nil {
 		log.Fatal(err)
-		return canvas.NewImageFromFile("black.png"), ID
+		return canvas.NewImageFromFile("./resources/black.png"), ID
 	}
 	if !playback.Playing {
 		time.Sleep(time.Second * 1)
@@ -148,14 +162,14 @@ func song_picture(client *spotify.Client, ID *spotify.ID) (*canvas.Image, *spoti
 		resp, err := http.Get(imageURL)
 		if err != nil {
 			log.Fatal(err)
-			return canvas.NewImageFromFile("black.png"), ID
+			return canvas.NewImageFromFile("./resources/black.png"), ID
 		}
 		defer resp.Body.Close()
 
 		imageData, err := io.ReadAll(resp.Body)
 		if err != nil {
 			log.Fatal(err)
-			return canvas.NewImageFromFile("black.png"), ID
+			return canvas.NewImageFromFile("./resources/black.png"), ID
 		}
 
 		imgResource := fyne.NewStaticResource("album_image.jpg", imageData)
@@ -164,9 +178,10 @@ func song_picture(client *spotify.Client, ID *spotify.ID) (*canvas.Image, *spoti
 		ID := playback.Item.ID
 		return image, &ID
 	}
-	return canvas.NewImageFromFile("black.png"), ID
+	return canvas.NewImageFromFile("./resources/black.png"), ID
 }
 
+// helper function for changing the image of song
 func change_picture(client *spotify.Client, content *fyne.Container) {
 	var ID *spotify.ID
 	var image *canvas.Image
@@ -177,6 +192,7 @@ func change_picture(client *spotify.Client, content *fyne.Container) {
 	}
 }
 
+// initialize MQTT client for subscribing to MQTT topics
 func init_mqtt_client(spot *spotify.Client) {
 	opts := mqtt.NewClientOptions().AddBroker(broker).SetClientID(client_id)
 	opts.SetAutoReconnect(true)
